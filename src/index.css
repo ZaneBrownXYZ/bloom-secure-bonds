@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Green Bond Platform Design System - Eco-premium Financial Interface
+All colors MUST be HSL for proper theming.
+*/
+
+@layer base {
+  :root {
+    /* Core eco-finance palette */
+    --background: 160 12% 8%;
+    --foreground: 120 15% 95%;
+
+    /* Card system with subtle green undertones */
+    --card: 160 15% 12%;
+    --card-foreground: 120 10% 92%;
+
+    --popover: 160 18% 10%;
+    --popover-foreground: 120 12% 94%;
+
+    /* Primary: Deep forest green for trust and nature */
+    --primary: 158 64% 25%;
+    --primary-foreground: 120 15% 95%;
+    --primary-glow: 158 85% 45%;
+
+    /* Secondary: Sage green for sophisticated accents */
+    --secondary: 140 20% 18%;
+    --secondary-foreground: 120 15% 90%;
+
+    /* Muted: Subtle earth tones */
+    --muted: 160 12% 15%;
+    --muted-foreground: 120 8% 70%;
+
+    /* Accent: Electric green for encrypted data highlights */
+    --accent: 140 80% 60%;
+    --accent-foreground: 160 15% 8%;
+
+    /* Trust blue for financial security */
+    --trust: 200 85% 45%;
+    --trust-foreground: 120 15% 95%;
+
+    /* Status colors */
+    --success: 142 76% 45%;
+    --warning: 45 85% 60%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 120 15% 95%;
+
+    /* Interface elements */
+    --border: 160 15% 20%;
+    --input: 160 15% 16%;
+    --ring: 158 85% 45%;
+
+    /* Premium gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-eco: linear-gradient(135deg, hsl(158 64% 25%), hsl(140 80% 60%));
+    --gradient-trust: linear-gradient(135deg, hsl(var(--trust)), hsl(158 85% 45%));
+    --gradient-encrypted: linear-gradient(45deg, hsl(140 80% 60%), hsl(200 85% 45%));
+
+    /* Shadows with green glow */
+    --shadow-glow: 0 0 30px hsl(var(--accent) / 0.3);
+    --shadow-encrypted: 0 0 20px hsl(var(--primary-glow) / 0.4);
+    --shadow-premium: 0 10px 40px -10px hsl(var(--primary) / 0.5);
+
+    /* Animation variables */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-glow: box-shadow 0.3s ease-in-out;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Light mode overrides for daytime trading */
+  .light {
+    --background: 120 15% 98%;
+    --foreground: 160 15% 12%;
+    --card: 120 20% 96%;
+    --card-foreground: 160 15% 15%;
+    --border: 160 20% 85%;
+    --input: 160 20% 90%;
+    --muted: 140 15% 92%;
+    --muted-foreground: 160 8% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbars with green theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-card;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-accent/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-accent/50;
+  }
+}
+
+@layer components {
+  /* Glow effects for encrypted data */
+  .glow-encrypted {
+    box-shadow: var(--shadow-encrypted);
+    transition: var(--transition-glow);
+  }
+
+  .glow-encrypted:hover {
+    box-shadow: 0 0 40px hsl(var(--accent) / 0.6);
+  }
+
+  /* Premium button effects */
+  .btn-premium {
+    @apply relative overflow-hidden;
+    background: var(--gradient-primary);
+    transition: var(--transition-smooth);
+  }
+
+  .btn-premium::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: var(--gradient-trust);
+  }
+
+  .btn-premium:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Encrypted chart animations */
+  .chart-encrypted {
+    @apply relative;
+    animation: subtle-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes subtle-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 20px hsl(var(--accent) / 0.2);
+    }
+    50% { 
+      box-shadow: 0 0 30px hsl(var(--accent) / 0.4);
+    }
+  }
+
+  /* Tree growth animation */
+  .tree-grow {
+    animation: grow-up 2s ease-out forwards;
+    transform-origin: bottom center;
+  }
+
+  @keyframes grow-up {
+    from {
+      transform: scaleY(0) translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: scaleY(1) translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Blockchain cube rotation */
+  .cube-rotate {
+    animation: rotate-cube 8s linear infinite;
+  }
+
+  @keyframes rotate-cube {
+    from { transform: rotate3d(1, 1, 1, 0deg); }
+    to { transform: rotate3d(1, 1, 1, 360deg); }
+  }
+
+  /* Wallet connection pulse */
+  .wallet-pulse {
+    animation: wallet-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes wallet-glow {
+    0%, 100% { 
+      box-shadow: 0 0 10px hsl(var(--trust) / 0.3);
+    }
+    50% { 
+      box-shadow: 0 0 25px hsl(var(--trust) / 0.6);
+    }
+  }
+}
