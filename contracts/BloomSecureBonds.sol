@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 // Bloom Secure Bonds - FHE-encrypted bond trading platform
 // Note: This is a demonstration contract. In production, FHE integration
 // would be handled by the Zama network or similar FHE infrastructure.
+// The contract maintains FHE concepts while using standard Solidity for compatibility.
 
 contract BloomSecureBonds {
     
