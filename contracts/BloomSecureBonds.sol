@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// Simplified Bloom Secure Bonds contract for demonstration
-// In production, FHE integration would be handled by the Zama network
+// Bloom Secure Bonds - FHE-encrypted bond trading platform
+// Note: This is a demonstration contract. In production, FHE integration
+// would be handled by the Zama network or similar FHE infrastructure.
+
 contract BloomSecureBonds {
     
     struct Bond {
@@ -45,9 +47,21 @@ contract BloomSecureBonds {
         bool isSettled;
     }
     
+    struct EncryptedAnalytics {
+        uint256 analyticsId;
+        uint256 totalVolume;
+        uint256 averagePrice;
+        uint256 priceVolatility;
+        uint256 liquidityScore;
+        bool isCalculated;
+        address calculator;
+        uint256 timestamp;
+    }
+    
     mapping(uint256 => Bond) public bonds;
     mapping(uint256 => BondHolding) public holdings;
     mapping(uint256 => Trade) public trades;
+    mapping(uint256 => EncryptedAnalytics) public analytics;
     mapping(address => uint256) public investorReputation;
     mapping(address => uint256) public issuerReputation;
     mapping(address => uint256) public encryptedBalance;
@@ -55,6 +69,7 @@ contract BloomSecureBonds {
     uint256 public bondCounter;
     uint256 public holdingCounter;
     uint256 public tradeCounter;
+    uint256 public analyticsCounter;
     
     address public owner;
     address public verifier;
@@ -66,11 +81,27 @@ contract BloomSecureBonds {
     event BondVerified(uint256 indexed bondId, bool isVerified);
     event ReputationUpdated(address indexed user, uint256 reputation);
     event CouponPaid(uint256 indexed bondId, address indexed holder, uint256 amount);
+    event AnalyticsCalculated(uint256 indexed analyticsId, uint256 indexed bondId, uint256 totalVolume);
     
     constructor(address _verifier, address _analyticsProvider) {
         owner = msg.sender;
         verifier = _verifier;
         analyticsProvider = _analyticsProvider;
+    }
+    
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+    
+    modifier onlyVerifier() {
+        require(msg.sender == verifier, "Only verifier can call this function");
+        _;
+    }
+    
+    modifier onlyAnalyticsProvider() {
+        require(msg.sender == analyticsProvider, "Only analytics provider can call this function");
+        _;
     }
     
     function issueBond(
@@ -181,16 +212,14 @@ contract BloomSecureBonds {
         return tradeId;
     }
     
-    function verifyBond(uint256 bondId, bool isVerified) public {
-        require(msg.sender == verifier, "Only verifier can verify bonds");
+    function verifyBond(uint256 bondId, bool isVerified) public onlyVerifier {
         require(bonds[bondId].issuer != address(0), "Bond does not exist");
         
         bonds[bondId].isVerified = isVerified;
         emit BondVerified(bondId, isVerified);
     }
     
-    function updateReputation(address user, uint256 reputation) public {
-        require(msg.sender == verifier, "Only verifier can update reputation");
+    function updateReputation(address user, uint256 reputation) public onlyVerifier {
         require(user != address(0), "Invalid user address");
         
         // Determine if user is investor or issuer based on context
@@ -212,6 +241,32 @@ contract BloomSecureBonds {
         bonds[bondId].couponPaymentDate = bonds[bondId].couponPaymentDate + 365 days;
         
         emit CouponPaid(bondId, holder, amount);
+    }
+    
+    function calculateAnalytics(
+        uint256 bondId,
+        uint256 totalVolume,
+        uint256 averagePrice,
+        uint256 priceVolatility,
+        uint256 liquidityScore
+    ) public onlyAnalyticsProvider returns (uint256) {
+        require(bonds[bondId].issuer != address(0), "Bond does not exist");
+        
+        uint256 analyticsId = analyticsCounter++;
+        
+        analytics[analyticsId] = EncryptedAnalytics({
+            analyticsId: analyticsId,
+            totalVolume: totalVolume,
+            averagePrice: averagePrice,
+            priceVolatility: priceVolatility,
+            liquidityScore: liquidityScore,
+            isCalculated: true,
+            calculator: msg.sender,
+            timestamp: block.timestamp
+        });
+        
+        emit AnalyticsCalculated(analyticsId, bondId, totalVolume);
+        return analyticsId;
     }
     
     function getBondInfo(uint256 bondId) public view returns (
@@ -281,6 +336,27 @@ contract BloomSecureBonds {
         );
     }
     
+    function getAnalyticsInfo(uint256 analyticsId) public view returns (
+        uint256 totalVolume,
+        uint256 averagePrice,
+        uint256 priceVolatility,
+        uint256 liquidityScore,
+        bool isCalculated,
+        address calculator,
+        uint256 timestamp
+    ) {
+        EncryptedAnalytics storage analyticsData = analytics[analyticsId];
+        return (
+            analyticsData.totalVolume,
+            analyticsData.averagePrice,
+            analyticsData.priceVolatility,
+            analyticsData.liquidityScore,
+            analyticsData.isCalculated,
+            analyticsData.calculator,
+            analyticsData.timestamp
+        );
+    }
+    
     function getInvestorReputation(address investor) public view returns (uint256) {
         return investorReputation[investor];
     }
@@ -306,5 +382,13 @@ contract BloomSecureBonds {
         // Transfer face value to holder
         // Note: In a real implementation, funds would be transferred based on face value
         // payable(msg.sender).transfer(faceValue);
+    }
+    
+    function setVerifier(address _verifier) public onlyOwner {
+        verifier = _verifier;
+    }
+    
+    function setAnalyticsProvider(address _analyticsProvider) public onlyOwner {
+        analyticsProvider = _analyticsProvider;
     }
 }
