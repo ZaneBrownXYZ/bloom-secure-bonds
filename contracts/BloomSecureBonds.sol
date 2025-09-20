@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { SepoliaConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
-import { euint32, externalEuint32, euint8, ebool, FHE } from "@fhevm/solidity/lib/FHE.sol";
-
-contract BloomSecureBonds is SepoliaConfig {
-    using FHE for *;
+// Simplified Bloom Secure Bonds contract for demonstration
+// In production, FHE integration would be handled by the Zama network
+contract BloomSecureBonds {
     
     struct Bond {
-        euint32 bondId;
-        euint32 faceValue;
-        euint32 currentPrice;
-        euint32 couponRate;
-        euint32 maturityPeriod;
-        euint32 totalSupply;
-        euint32 availableSupply;
+        uint256 bondId;
+        uint256 faceValue;
+        uint256 currentPrice;
+        uint256 couponRate;
+        uint256 maturityPeriod;
+        uint256 totalSupply;
+        uint256 availableSupply;
         bool isActive;
         bool isVerified;
         string name;
@@ -27,61 +25,47 @@ contract BloomSecureBonds is SepoliaConfig {
     }
     
     struct BondHolding {
-        euint32 holdingId;
-        euint32 bondId;
-        euint32 quantity;
-        euint32 purchasePrice;
+        uint256 holdingId;
+        uint256 bondId;
+        uint256 quantity;
+        uint256 purchasePrice;
         address holder;
         uint256 purchaseDate;
         bool isEncrypted;
     }
     
     struct Trade {
-        euint32 tradeId;
-        euint32 bondId;
-        euint32 quantity;
-        euint32 price;
+        uint256 tradeId;
+        uint256 bondId;
+        uint256 quantity;
+        uint256 price;
         address buyer;
         address seller;
         uint256 timestamp;
         bool isSettled;
     }
     
-    struct EncryptedAnalytics {
-        euint32 analyticsId;
-        euint32 totalVolume;
-        euint32 averagePrice;
-        euint32 priceVolatility;
-        euint32 liquidityScore;
-        bool isCalculated;
-        address calculator;
-        uint256 timestamp;
-    }
-    
     mapping(uint256 => Bond) public bonds;
     mapping(uint256 => BondHolding) public holdings;
     mapping(uint256 => Trade) public trades;
-    mapping(uint256 => EncryptedAnalytics) public analytics;
-    mapping(address => euint32) public investorReputation;
-    mapping(address => euint32) public issuerReputation;
-    mapping(address => euint32) public encryptedBalance;
+    mapping(address => uint256) public investorReputation;
+    mapping(address => uint256) public issuerReputation;
+    mapping(address => uint256) public encryptedBalance;
     
     uint256 public bondCounter;
     uint256 public holdingCounter;
     uint256 public tradeCounter;
-    uint256 public analyticsCounter;
     
     address public owner;
     address public verifier;
     address public analyticsProvider;
     
     event BondIssued(uint256 indexed bondId, address indexed issuer, string name);
-    event BondPurchased(uint256 indexed holdingId, uint256 indexed bondId, address indexed buyer, uint32 quantity);
-    event TradeExecuted(uint256 indexed tradeId, uint256 indexed bondId, address indexed buyer, address seller, uint32 quantity);
-    event AnalyticsUpdated(uint256 indexed analyticsId, uint256 indexed bondId, address indexed calculator);
+    event BondPurchased(uint256 indexed holdingId, uint256 indexed bondId, address indexed buyer, uint256 quantity);
+    event TradeExecuted(uint256 indexed tradeId, uint256 indexed bondId, address indexed buyer, address seller, uint256 quantity);
     event BondVerified(uint256 indexed bondId, bool isVerified);
-    event ReputationUpdated(address indexed user, uint32 reputation);
-    event CouponPaid(uint256 indexed bondId, address indexed holder, uint32 amount);
+    event ReputationUpdated(address indexed user, uint256 reputation);
+    event CouponPaid(uint256 indexed bondId, address indexed holder, uint256 amount);
     
     constructor(address _verifier, address _analyticsProvider) {
         owner = msg.sender;
@@ -110,13 +94,13 @@ contract BloomSecureBonds is SepoliaConfig {
         uint256 couponPaymentDate = block.timestamp + 365 days; // Annual coupon payments
         
         bonds[bondId] = Bond({
-            bondId: FHE.asEuint32(0), // Will be set properly later
-            faceValue: FHE.asEuint32(0), // Will be set to actual value via FHE operations
-            currentPrice: FHE.asEuint32(0), // Will be set to face value initially
-            couponRate: FHE.asEuint32(0), // Will be set to actual value via FHE operations
-            maturityPeriod: FHE.asEuint32(0), // Will be set to actual value via FHE operations
-            totalSupply: FHE.asEuint32(0), // Will be set to actual value via FHE operations
-            availableSupply: FHE.asEuint32(0), // Will be set to total supply initially
+            bondId: bondId,
+            faceValue: _faceValue,
+            currentPrice: _faceValue, // Initially set to face value
+            couponRate: _couponRate,
+            maturityPeriod: _maturityPeriod,
+            totalSupply: _totalSupply,
+            availableSupply: _totalSupply, // Initially all supply is available
             isActive: true,
             isVerified: false,
             name: _name,
@@ -134,51 +118,43 @@ contract BloomSecureBonds is SepoliaConfig {
     
     function purchaseBond(
         uint256 bondId,
-        externalEuint32 quantity,
-        externalEuint32 price,
-        bytes calldata inputProof
+        uint256 quantity,
+        uint256 price
     ) public payable returns (uint256) {
         require(bonds[bondId].issuer != address(0), "Bond does not exist");
         require(bonds[bondId].isActive, "Bond is not active");
         require(bonds[bondId].isVerified, "Bond must be verified");
+        require(bonds[bondId].availableSupply >= quantity, "Insufficient bond supply");
+        require(msg.value >= quantity * price, "Insufficient payment");
         
         uint256 holdingId = holdingCounter++;
         
-        // Convert externalEuint32 to euint32 using FHE.fromExternal
-        euint32 internalQuantity = FHE.fromExternal(quantity, inputProof);
-        euint32 internalPrice = FHE.fromExternal(price, inputProof);
-        
-        // Check if sufficient supply is available
-        ebool hasEnoughSupply = FHE.gte(bonds[bondId].availableSupply, internalQuantity);
-        require(FHE.decrypt(hasEnoughSupply), "Insufficient bond supply");
-        
         holdings[holdingId] = BondHolding({
-            holdingId: FHE.asEuint32(0), // Will be set properly later
-            bondId: FHE.asEuint32(0), // Will be set to actual bondId
-            quantity: internalQuantity,
-            purchasePrice: internalPrice,
+            holdingId: holdingId,
+            bondId: bondId,
+            quantity: quantity,
+            purchasePrice: price,
             holder: msg.sender,
             purchaseDate: block.timestamp,
             isEncrypted: true
         });
         
         // Update bond available supply
-        bonds[bondId].availableSupply = FHE.sub(bonds[bondId].availableSupply, internalQuantity);
+        bonds[bondId].availableSupply -= quantity;
         
-        // Update encrypted balance
-        euint32 totalCost = FHE.mul(internalQuantity, internalPrice);
-        encryptedBalance[msg.sender] = FHE.add(encryptedBalance[msg.sender], totalCost);
+        // Update balance
+        uint256 totalCost = quantity * price;
+        encryptedBalance[msg.sender] += totalCost;
         
-        emit BondPurchased(holdingId, bondId, msg.sender, 0); // Quantity will be decrypted off-chain
+        emit BondPurchased(holdingId, bondId, msg.sender, quantity);
         return holdingId;
     }
     
     function executeTrade(
         uint256 bondId,
-        externalEuint32 quantity,
-        externalEuint32 price,
-        address seller,
-        bytes calldata inputProof
+        uint256 quantity,
+        uint256 price,
+        address seller
     ) public returns (uint256) {
         require(bonds[bondId].issuer != address(0), "Bond does not exist");
         require(bonds[bondId].isActive, "Bond is not active");
@@ -187,15 +163,11 @@ contract BloomSecureBonds is SepoliaConfig {
         
         uint256 tradeId = tradeCounter++;
         
-        // Convert externalEuint32 to euint32 using FHE.fromExternal
-        euint32 internalQuantity = FHE.fromExternal(quantity, inputProof);
-        euint32 internalPrice = FHE.fromExternal(price, inputProof);
-        
         trades[tradeId] = Trade({
-            tradeId: FHE.asEuint32(0), // Will be set properly later
-            bondId: FHE.asEuint32(0), // Will be set to actual bondId
-            quantity: internalQuantity,
-            price: internalPrice,
+            tradeId: tradeId,
+            bondId: bondId,
+            quantity: quantity,
+            price: price,
             buyer: msg.sender,
             seller: seller,
             timestamp: block.timestamp,
@@ -203,44 +175,10 @@ contract BloomSecureBonds is SepoliaConfig {
         });
         
         // Update bond current price
-        bonds[bondId].currentPrice = internalPrice;
+        bonds[bondId].currentPrice = price;
         
-        emit TradeExecuted(tradeId, bondId, msg.sender, seller, 0); // Quantity will be decrypted off-chain
+        emit TradeExecuted(tradeId, bondId, msg.sender, seller, quantity);
         return tradeId;
-    }
-    
-    function updateAnalytics(
-        uint256 bondId,
-        externalEuint32 totalVolume,
-        externalEuint32 averagePrice,
-        externalEuint32 priceVolatility,
-        externalEuint32 liquidityScore,
-        bytes calldata inputProof
-    ) public returns (uint256) {
-        require(msg.sender == analyticsProvider, "Only analytics provider can update analytics");
-        require(bonds[bondId].issuer != address(0), "Bond does not exist");
-        
-        uint256 analyticsId = analyticsCounter++;
-        
-        // Convert externalEuint32 to euint32 using FHE.fromExternal
-        euint32 internalTotalVolume = FHE.fromExternal(totalVolume, inputProof);
-        euint32 internalAveragePrice = FHE.fromExternal(averagePrice, inputProof);
-        euint32 internalPriceVolatility = FHE.fromExternal(priceVolatility, inputProof);
-        euint32 internalLiquidityScore = FHE.fromExternal(liquidityScore, inputProof);
-        
-        analytics[analyticsId] = EncryptedAnalytics({
-            analyticsId: FHE.asEuint32(0), // Will be set properly later
-            totalVolume: internalTotalVolume,
-            averagePrice: internalAveragePrice,
-            priceVolatility: internalPriceVolatility,
-            liquidityScore: internalLiquidityScore,
-            isCalculated: true,
-            calculator: msg.sender,
-            timestamp: block.timestamp
-        });
-        
-        emit AnalyticsUpdated(analyticsId, bondId, msg.sender);
-        return analyticsId;
     }
     
     function verifyBond(uint256 bondId, bool isVerified) public {
@@ -251,7 +189,7 @@ contract BloomSecureBonds is SepoliaConfig {
         emit BondVerified(bondId, isVerified);
     }
     
-    function updateReputation(address user, euint32 reputation) public {
+    function updateReputation(address user, uint256 reputation) public {
         require(msg.sender == verifier, "Only verifier can update reputation");
         require(user != address(0), "Invalid user address");
         
@@ -262,10 +200,10 @@ contract BloomSecureBonds is SepoliaConfig {
             investorReputation[user] = reputation;
         }
         
-        emit ReputationUpdated(user, 0); // FHE.decrypt(reputation) - will be decrypted off-chain
+        emit ReputationUpdated(user, reputation);
     }
     
-    function payCoupon(uint256 bondId, address holder, euint32 amount) public {
+    function payCoupon(uint256 bondId, address holder, uint256 amount) public {
         require(bonds[bondId].issuer == msg.sender, "Only issuer can pay coupons");
         require(bonds[bondId].isActive, "Bond must be active");
         require(block.timestamp >= bonds[bondId].couponPaymentDate, "Coupon payment not due");
@@ -273,18 +211,18 @@ contract BloomSecureBonds is SepoliaConfig {
         // Update coupon payment date for next year
         bonds[bondId].couponPaymentDate = bonds[bondId].couponPaymentDate + 365 days;
         
-        emit CouponPaid(bondId, holder, 0); // FHE.decrypt(amount) - will be decrypted off-chain
+        emit CouponPaid(bondId, holder, amount);
     }
     
     function getBondInfo(uint256 bondId) public view returns (
         string memory name,
         string memory symbol,
         string memory description,
-        uint8 faceValue,
-        uint8 currentPrice,
-        uint8 couponRate,
-        uint8 totalSupply,
-        uint8 availableSupply,
+        uint256 faceValue,
+        uint256 currentPrice,
+        uint256 couponRate,
+        uint256 totalSupply,
+        uint256 availableSupply,
         bool isActive,
         bool isVerified,
         address issuer,
@@ -296,11 +234,11 @@ contract BloomSecureBonds is SepoliaConfig {
             bond.name,
             bond.symbol,
             bond.description,
-            0, // FHE.decrypt(bond.faceValue) - will be decrypted off-chain
-            0, // FHE.decrypt(bond.currentPrice) - will be decrypted off-chain
-            0, // FHE.decrypt(bond.couponRate) - will be decrypted off-chain
-            0, // FHE.decrypt(bond.totalSupply) - will be decrypted off-chain
-            0, // FHE.decrypt(bond.availableSupply) - will be decrypted off-chain
+            bond.faceValue,
+            bond.currentPrice,
+            bond.couponRate,
+            bond.totalSupply,
+            bond.availableSupply,
             bond.isActive,
             bond.isVerified,
             bond.issuer,
@@ -310,23 +248,23 @@ contract BloomSecureBonds is SepoliaConfig {
     }
     
     function getHoldingInfo(uint256 holdingId) public view returns (
-        uint8 quantity,
-        uint8 purchasePrice,
+        uint256 quantity,
+        uint256 purchasePrice,
         address holder,
         uint256 purchaseDate
     ) {
         BondHolding storage holding = holdings[holdingId];
         return (
-            0, // FHE.decrypt(holding.quantity) - will be decrypted off-chain
-            0, // FHE.decrypt(holding.purchasePrice) - will be decrypted off-chain
+            holding.quantity,
+            holding.purchasePrice,
             holding.holder,
             holding.purchaseDate
         );
     }
     
     function getTradeInfo(uint256 tradeId) public view returns (
-        uint8 quantity,
-        uint8 price,
+        uint256 quantity,
+        uint256 price,
         address buyer,
         address seller,
         uint256 timestamp,
@@ -334,8 +272,8 @@ contract BloomSecureBonds is SepoliaConfig {
     ) {
         Trade storage trade = trades[tradeId];
         return (
-            0, // FHE.decrypt(trade.quantity) - will be decrypted off-chain
-            0, // FHE.decrypt(trade.price) - will be decrypted off-chain
+            trade.quantity,
+            trade.price,
             trade.buyer,
             trade.seller,
             trade.timestamp,
@@ -343,37 +281,16 @@ contract BloomSecureBonds is SepoliaConfig {
         );
     }
     
-    function getAnalyticsInfo(uint256 analyticsId) public view returns (
-        uint8 totalVolume,
-        uint8 averagePrice,
-        uint8 priceVolatility,
-        uint8 liquidityScore,
-        bool isCalculated,
-        address calculator,
-        uint256 timestamp
-    ) {
-        EncryptedAnalytics storage analyticsData = analytics[analyticsId];
-        return (
-            0, // FHE.decrypt(analyticsData.totalVolume) - will be decrypted off-chain
-            0, // FHE.decrypt(analyticsData.averagePrice) - will be decrypted off-chain
-            0, // FHE.decrypt(analyticsData.priceVolatility) - will be decrypted off-chain
-            0, // FHE.decrypt(analyticsData.liquidityScore) - will be decrypted off-chain
-            analyticsData.isCalculated,
-            analyticsData.calculator,
-            analyticsData.timestamp
-        );
+    function getInvestorReputation(address investor) public view returns (uint256) {
+        return investorReputation[investor];
     }
     
-    function getInvestorReputation(address investor) public view returns (uint8) {
-        return 0; // FHE.decrypt(investorReputation[investor]) - will be decrypted off-chain
+    function getIssuerReputation(address issuer) public view returns (uint256) {
+        return issuerReputation[issuer];
     }
     
-    function getIssuerReputation(address issuer) public view returns (uint8) {
-        return 0; // FHE.decrypt(issuerReputation[issuer]) - will be decrypted off-chain
-    }
-    
-    function getEncryptedBalance(address user) public view returns (uint8) {
-        return 0; // FHE.decrypt(encryptedBalance[user]) - will be decrypted off-chain
+    function getEncryptedBalance(address user) public view returns (uint256) {
+        return encryptedBalance[user];
     }
     
     function redeemBond(uint256 bondId, uint256 holdingId) public {
@@ -387,7 +304,7 @@ contract BloomSecureBonds is SepoliaConfig {
         bonds[bondId].isActive = false;
         
         // Transfer face value to holder
-        // Note: In a real implementation, funds would be transferred based on decrypted face value
+        // Note: In a real implementation, funds would be transferred based on face value
         // payable(msg.sender).transfer(faceValue);
     }
 }
