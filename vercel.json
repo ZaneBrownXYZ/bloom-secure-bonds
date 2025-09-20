@@ -1,9 +1,11 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
+  "installCommand": "npm ci --legacy-peer-deps --no-cache",
   "framework": "vite",
   "env": {
     "NEXT_PUBLIC_CHAIN_ID": "11155111"
-  }
+  },
+  "cleanUrls": true,
+  "trailingSlash": false
 }
