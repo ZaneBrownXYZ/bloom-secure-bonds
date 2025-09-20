@@ -1,5 +1,6 @@
 import { EncryptedChart } from "./EncryptedChart";
 import { WalletConnect } from "./WalletConnect";
+import { ContractInteraction } from "./ContractInteraction";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,8 @@ import {
   Lock,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  Smartphone
 } from "lucide-react";
 
 export const Dashboard = () => {
@@ -148,6 +150,19 @@ export const Dashboard = () => {
               Real-time Data
             </Button>
           </Link>
+        </div>
+
+        {/* Smart Contract Interaction */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+            <Smartphone className="w-5 h-5" />
+            Smart Contract Interaction
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Interact directly with FHE-encrypted smart contracts for secure bond trading. 
+            All sensitive data is encrypted on-chain using fully homomorphic encryption.
+          </p>
+          <ContractInteraction />
         </div>
 
         {/* Access Notice */}
