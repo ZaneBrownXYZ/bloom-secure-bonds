@@ -103,19 +103,14 @@ NEXT_PUBLIC_INFURA_API_KEY=b18fb7e6ca7045ac83c41157ab93f990
 
 ### Build Configuration File (vercel.json)
 
-Create a `vercel.json` file in your project root if needed:
+The project includes a `vercel.json` file with the correct configuration:
 
 ```json
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "framework": "vite",
-  "functions": {
-    "app/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  "framework": "vite"
 }
 ```
 
